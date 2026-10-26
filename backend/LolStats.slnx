@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LolStats.Analytics/LolStats.Analytics.csproj" />
+    <Project Path="src/LolStats.Api/LolStats.Api.csproj" />
+    <Project Path="src/LolStats.Contracts/LolStats.Contracts.csproj" />
+    <Project Path="src/LolStats.Data/LolStats.Data.csproj" />
+    <Project Path="src/LolStats.Domain/LolStats.Domain.csproj" />
+    <Project Path="src/LolStats.Riot/LolStats.Riot.csproj" />
+    <Project Path="src/LolStats.Worker/LolStats.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LolStats.Analytics.Tests/LolStats.Analytics.Tests.csproj" />
+    <Project Path="tests/LolStats.Api.Tests/LolStats.Api.Tests.csproj" />
+  </Folder>
+</Solution>

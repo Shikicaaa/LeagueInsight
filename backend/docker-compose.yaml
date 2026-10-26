@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: lolstats
+      POSTGRES_PASSWORD: lolstats
+      POSTGRES_DB: lolstats
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+  valkey:
+    image: valkey/valkey:8
+    command: ["valkey-server", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru"]
+    ports: ["6379:6379"]
+volumes:
+  pgdata:

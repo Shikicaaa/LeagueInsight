@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-LolStats.Worker-567cd26a-32ac-48e0-bb8d-517c3d2a0cf7</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hangfire.NetCore" Version="1.8.25" />
+    <PackageReference Include="Hangfire.PostgreSql" Version="1.21.1" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LolStats.Domain\LolStats.Domain.csproj" />
+    <ProjectReference Include="..\LolStats.Data\LolStats.Data.csproj" />
+    <ProjectReference Include="..\LolStats.Riot\LolStats.Riot.csproj" />
+    <ProjectReference Include="..\LolStats.Analytics\LolStats.Analytics.csproj" />
+  </ItemGroup>
+</Project>
