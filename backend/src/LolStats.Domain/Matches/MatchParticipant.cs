@@ -7,6 +7,8 @@ public sealed class MatchParticipant
     public required short ParticipantId {get; init;}
     public required short TeamId {get; init;}
     public required int ChampionId {get; init;}
+    public required QueueId QueueId { get; init; }
+    public required DateTimeOffset GameStart {get; init;}
     public required TeamPosition TeamPosition {get; init;}
     public required bool Win {get; init;}
 

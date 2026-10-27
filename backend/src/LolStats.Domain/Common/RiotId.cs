@@ -33,10 +33,9 @@ public sealed record RiotId
         return true;
     }
 
-/// <summary>
-/// Tries to parse a Riot ID from a string in the format "GameName#Tagline".
-/// </summary>
-
+    /// <summary>
+    /// Tries to parse a Riot ID from a string in the format "GameName#Tagline".
+    /// </summary>
     public static bool TryParse(string? value, out RiotId riotId)
     {
         riotId = null!;
@@ -44,9 +43,9 @@ public sealed record RiotId
         return hash > 0 && TryCreate(value![..hash], value[(hash + 1)..], out riotId);
     }
 
-/// <summary>
-/// Tries to parse a Riot ID from a string in the format "GameName-Tagline".
-/// </summary>
+    /// <summary>
+    /// Tries to parse a Riot ID from a string in the format "GameName-Tagline".
+    /// </summary>
     public static bool TryParseSlug(string? slug, out RiotId riotId)
     {
         riotId = null!;

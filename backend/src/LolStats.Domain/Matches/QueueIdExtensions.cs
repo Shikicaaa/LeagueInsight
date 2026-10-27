@@ -11,7 +11,7 @@ public static class QueueIdExtensions
 
     public static bool IsAram(this QueueId queue) => queue is QueueId.Aram or QueueId.AramMayhem;
 
-    public static bool IsArena(this QueueId queue) => queue is QueueId.Arena or QueueId.AramMayhem;
+    public static bool IsArena(this QueueId queue) => queue is QueueId.Arena;
 
     public static int? ExpectedParticipantCount(this QueueId queue) => queue switch
     {
