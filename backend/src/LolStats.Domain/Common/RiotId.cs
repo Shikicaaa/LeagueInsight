@@ -26,7 +26,7 @@ public sealed record RiotId
         if (gameName is null || tagLine is null)
             return false;
         gameName = gameName.Trim();
-        tagLine = tagLine.TrimStart('#');
+        tagLine = tagLine.Trim().TrimStart('#');
         if (gameName.Length is < 3 or > 16 || tagLine.Length is < 3 or > 5)
             return false;
         riotId = new RiotId(gameName, tagLine);
@@ -44,9 +44,9 @@ public sealed record RiotId
         return hash > 0 && TryCreate(value![..hash], value[(hash + 1)..], out riotId);
     }
 
-// <summary>
-// Tries to parse a Riot ID from a string in the format "GameName-Tagline".
-// </summary>
+/// <summary>
+/// Tries to parse a Riot ID from a string in the format "GameName-Tagline".
+/// </summary>
     public static bool TryParseSlug(string? slug, out RiotId riotId)
     {
         riotId = null!;

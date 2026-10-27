@@ -7,7 +7,7 @@ public static class QueueIdExtensions
     public static bool IsSummonersRift5v5(this QueueId queue) =>
         queue is QueueId.RankedSolo or QueueId.RankedFlex
         or QueueId.NormalDraft or QueueId.NormalBlind or QueueId.Swiftplay
-        or QueueId.Clash;
+        or QueueId.Clash or QueueId.Quickplay;
 
     public static bool IsAram(this QueueId queue) => queue is QueueId.Aram or QueueId.AramMayhem;
 
