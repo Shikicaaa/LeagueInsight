@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.25" />
-    <PackageReference Include="Hangfire.PostgreSql" Version="1.21.1" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="10.0.14" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14">
@@ -26,6 +25,7 @@
     <ProjectReference Include="..\LolStats.Data\LolStats.Data.csproj" />
     <ProjectReference Include="..\LolStats.Contracts\LolStats.Contracts.csproj" />
     <ProjectReference Include="..\LolStats.Riot\LolStats.Riot.csproj" />
+    <ProjectReference Include="..\LolStats.Infrastructure\LolStats.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

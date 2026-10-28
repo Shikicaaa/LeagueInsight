@@ -114,6 +114,7 @@ LeagueInsight/
 │  │  ├─ LolStats.Riot         typed klijent, DTO-ovi, IRateLimiter, routing (eun1/europe)
 │  │  ├─ LolStats.Analytics    feature extraction, perf_score, playstyle, zone mape, baselines
 │  │  ├─ LolStats.Data         EF Core DbContext, migracije, Dapper upiti, outbox
+│  │  ├─ LolStats.Infrastructure  Hangfire (IJobQueue, JobRunner<T>), kasnije Valkey (ICache, IDistributedLock)
 │  │  ├─ LolStats.Domain       entiteti, eventi, interfejsi (ICache, IJobQueue, IEventPublisher)
 │  │  └─ LolStats.Contracts    response modeli (izvor za generisane TS tipove)
 │  └─ tests/

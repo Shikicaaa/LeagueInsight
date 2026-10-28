@@ -5,6 +5,7 @@
     <Project Path="src/LolStats.Contracts/LolStats.Contracts.csproj" />
     <Project Path="src/LolStats.Data/LolStats.Data.csproj" />
     <Project Path="src/LolStats.Domain/LolStats.Domain.csproj" />
+    <Project Path="src/LolStats.Infrastructure/LolStats.Infrastructure.csproj" />
     <Project Path="src/LolStats.Riot/LolStats.Riot.csproj" />
     <Project Path="src/LolStats.Worker/LolStats.Worker.csproj" />
   </Folder>
