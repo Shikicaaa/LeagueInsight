@@ -13,9 +13,11 @@ public interface IRiotGateway
 
     Task<RiotAccount?> GetAccountByPuuidAsync(string puuid, CancellationToken ct = default);
 
-    Task<SummonerProfile?> GetSummonerAsync(string summonerName, CancellationToken ct = default);
+    Task<SummonerProfile?> GetSummonerAsync(string puuid, CancellationToken ct = default);
 
     Task<IReadOnlyList<LeagueSnapshot>> GetLeagueEntriesAsync(string puuid, CancellationToken ct = default);
+
+    Task<IReadOnlyList<string>> GetMatchIdsAsync(string puuid, MatchIdsQuery query, CancellationToken ct = default);
 
     Task<Match?> GetMatchAsync(string matchId, CancellationToken ct = default);
 }

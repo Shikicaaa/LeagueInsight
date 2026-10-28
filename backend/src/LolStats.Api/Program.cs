@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using LolStats.Data;
 using LolStats.Riot;
 
@@ -7,6 +8,11 @@ builder.Services.AddLolStatsData(
     builder.Configuration.GetConnectionString("Postgres")
         ?? throw new InvalidOperationException("Connection string 'Postgres' is missing."));
 builder.Services.AddLolStatsRiot();
+
+// Enums as names ("MIDDLE", "RankedSolo") instead of numbers, in responses and query strings.
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddProblemDetails();
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -22,5 +28,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.MapControllers();
 
 app.Run();
