@@ -23,6 +23,7 @@ Pun dizajn: [`docs/dizajn-sistema.md`](docs/dizajn-sistema.md) — šema baze, e
 
 1. **Korisnički request nikad ne čeka Riot.** Jedini izuzetak: prvi lookup Riot ID → PUUID (`account-v1`, sinhrono, 1 poziv). Sve ostalo ide kroz Hangfire red; API odmah vraća ono što ima (`lastUpdatedAt`, `isStale`, `refreshState`) ili `202`.
 2. **Samo Worker zove Riot** (osim gornjeg izuzetka u Api-ju). Svaki poziv prolazi kroz `IRateLimiter` — nema direktnog `HttpClient` poziva van `LolStats.Riot`.
+   Api i Worker koriste samo port `IRiotGateway` (`LolStats.Domain/Riot`) i domenske tipove. Typed klijenti, DTO-ovi i maperi su `internal` u `LolStats.Riot` i ne izlaze iz njega.
 3. **Mečevi su nepromenljivi.** Postgres je izvor istine i čuva ih zauvek. Upis `ON CONFLICT DO NOTHING` na `match_id`. Valkey se može obrisati u bilo kom trenutku bez gubitka podataka.
 4. **Nikad ne povlači meč koji već postoji u bazi.** Uvek diff (`WHERE match_id = ANY(@ids)`) pre fetcha. Jedan meč puni podatke za svih 10 učesnika.
 5. **Inkrementalni refresh:** lista ID-jeva od `last_match_ts` (`startTime`), `count=10`.
