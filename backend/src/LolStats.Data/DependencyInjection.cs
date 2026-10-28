@@ -1,5 +1,7 @@
+using LolStats.Data.Matches;
 using LolStats.Data.Outbox;
 using LolStats.Domain.Abstractions;
+using LolStats.Domain.Matches;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -17,6 +19,8 @@ public static class DependencyInjection
 
         services.AddScoped<IEventPublisher, OutboxEventPublisher>();
         services.TryAddSingleton(TimeProvider.System);
+
+        services.AddScoped<IMatchStore, MatchStore>();
 
         return services;
     }
