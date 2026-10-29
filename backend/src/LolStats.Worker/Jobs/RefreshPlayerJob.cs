@@ -1,24 +1,22 @@
+using LolStats.Data;
 using LolStats.Domain.Abstractions;
+using LolStats.Domain.Events;
 using LolStats.Domain.Jobs;
+using LolStats.Domain.Matches;
+using LolStats.Domain.Players;
+using LolStats.Domain.Riot;
+using Microsoft.EntityFrameworkCore;
 
 namespace LolStats.Worker.Jobs;
 
-// Skeleton for step 2. Right now it only proves the pipeline: Api enqueues -> Hangfire -> this handler.
-public sealed class RefreshPlayerJob(ILogger<RefreshPlayerJob> logger, IDistributedLock locks) : IJobHandler<RefreshPlayer>
+// Flow 2: refreshes one player's summoner, rank and new ranked matches.
+public sealed class RefreshPlayerJob(
+    ILogger<RefreshPlayerJob> logger, IDistributedLock locks,
+    IRiotGateway riot, LolStatsDbContext db, IMatchStore matches,
+    IEventPublisher events, TimeProvider time) : IJobHandler<RefreshPlayer>
 {
     public async Task HandleAsync(RefreshPlayer job, CancellationToken ct)
     {
-        // logger.LogInformation("Refreshing {Puuid} at priority {Priority}", job.Puuid, JobContext.Priority);
-
-        // // TODO (step 2, flow 2 in CLAUDE.md):
-        // // 1. lock:job:{puuid}, held until the end
-        // // 2. summoner + league -> update Player, LP snapshot, RankChanged in the outbox if rank changed
-        // // 3. match ids from last_match_ts (startTime), count = 10, per ranked queue
-        // // 4. diff with the database (WHERE match_id = ANY(@ids)), fetch only new matches
-        // // 5. one transaction: matches, participants, outbox MatchIngested, player.RecordIngestedMatch
-        // // 6. player.MarkRefreshed, release lock
-        
-        // return Task.CompletedTask;
         await using var handle = await locks.TryAcquireAsync($"lock:job:{job.Puuid}", TimeSpan.FromMinutes(2), ct);
         if (handle is null)
         {
@@ -27,5 +25,93 @@ public sealed class RefreshPlayerJob(ILogger<RefreshPlayerJob> logger, IDistribu
         }
 
         logger.LogInformation("Refreshing {Puuid} at priority {Priority}", job.Puuid, JobContext.Priority);
+
+        Player? player = await db.Players.FirstOrDefaultAsync(p => p.Puuid == job.Puuid, ct);
+        if (player is null)
+        {
+            var account = await riot.GetAccountByPuuidAsync(job.Puuid, ct);
+            if (account is null)
+            {
+                logger.LogWarning("No account found for {Puuid}, skipping", job.Puuid);
+                return;
+            }
+            player = new Player(account.Puuid, riot.Platform, account.RiotId);
+            db.Players.Add(player); // only new players; a loaded one is already tracked and gets an UPDATE
+        }
+
+        var summoner = await riot.GetSummonerAsync(player.Puuid, ct);
+        if (summoner is null)
+        {
+            logger.LogWarning("No summoner found for {Puuid}, skipping", job.Puuid);
+            return;
+        }
+
+        player.UpdateSummoner(summoner.ProfileIconId, summoner.SummonerLevel);
+
+        var league = await riot.GetLeagueEntriesAsync(player.Puuid, ct);
+        if (league.Count == 0)
+        {
+            logger.LogInformation("{Puuid} has no rank entries", job.Puuid);
+        }
+        foreach (LeagueSnapshot entry in league)
+        {
+            var previous = await db.LeagueSnapshots
+                .Where(s => s.Puuid == player.Puuid && s.Queue == entry.Queue)
+                .OrderByDescending(s => s.CapturedAt)
+                .FirstOrDefaultAsync(ct);
+            if (entry.RankDiffersFrom(previous))
+            {
+                db.LeagueSnapshots.Add(entry);
+                events.Publish(new RankChanged(player.Puuid, entry.Queue, previous?.Tier, entry.Tier, entry.Lp - (previous?.Lp ?? 0)));
+            }
+        }
+
+        var ids = new HashSet<string>();
+        foreach (var queue in new[] { QueueId.RankedSolo, QueueId.RankedFlex })
+        {
+            var queueIds = await riot.GetMatchIdsAsync(player.Puuid, new MatchIdsQuery(queue, StartTime: player.LastMatchTs), ct);
+            ids.UnionWith(queueIds);
+        }
+
+        var existing = await matches.GetExistingIdsAsync(ids, ct);
+        var newIds = ids.Except(existing)
+            .OrderBy(id => long.Parse(id[(id.IndexOf('_') + 1)..]))   // EUN1_4021457560 -> 4021457560, oldest first
+            .ToList();
+
+        logger.LogInformation("{Puuid}: {Total} match ids since {LastMatchTs}", player.Puuid, ids.Count, player.LastMatchTs);
+
+        var savedIds = new List<string>();
+        foreach (var matchId in newIds)
+        {
+            var match = await riot.GetMatchAsync(matchId, ct);
+            if (match is null)
+            {
+                logger.LogWarning("No match found for {MatchId}, skipping", matchId);
+                continue;
+            }
+
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            if (await matches.TryAddAsync(match, ct))
+            {
+                events.Publish(new MatchIngested(
+                    match.MatchId, 
+                    match.Participants.Select(p => p.Puuid).ToList(), 
+                    match.Patch, 
+                    match.QueueId, 
+                    match.HasTimeline
+                ));
+            }
+
+            player.RecordIngestedMatch(match.MatchId, match.GameStart);
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            savedIds.Add(match.MatchId);
+        }
+
+        player.MarkRefreshed(time.GetUtcNow());
+        events.Publish(new PlayerRefreshed(player.Puuid, savedIds));
+
+        await db.SaveChangesAsync(ct);
+
     }
 }
