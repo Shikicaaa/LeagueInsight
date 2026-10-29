@@ -17,7 +17,7 @@ public sealed class RefreshPlayerJob(
 {
     public async Task HandleAsync(RefreshPlayer job, CancellationToken ct)
     {
-        await using var handle = await locks.TryAcquireAsync($"lock:job:{job.Puuid}", TimeSpan.FromMinutes(2), ct);
+        await using var handle = await locks.TryAcquireAsync($"lock:job:{job.Puuid}", TimeSpan.FromMinutes(4), ct);
         if (handle is null)
         {
             logger.LogInformation("{Puuid} is already being refreshed by another worker, skipping", job.Puuid);
@@ -74,6 +74,17 @@ public sealed class RefreshPlayerJob(
         }
 
         var existing = await matches.GetExistingIdsAsync(ids, ct);
+        if (existing.Count > 0)
+        {
+            var latestExisting = await db.Matches
+                .Where(m => existing.Contains(m.MatchId))
+                .OrderByDescending(m => m.GameStart)
+                .Select(m => new { m.MatchId, m.GameStart })
+                .FirstOrDefaultAsync(ct);
+            if (latestExisting is not null)
+                player.RecordIngestedMatch(latestExisting.MatchId, latestExisting.GameStart);    
+        }
+        
         var newIds = ids.Except(existing)
             .OrderBy(id => long.Parse(id[(id.IndexOf('_') + 1)..]))   // EUN1_4021457560 -> 4021457560, oldest first
             .ToList();
