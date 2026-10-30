@@ -6,4 +6,5 @@ public sealed record RefreshPlayer(string Puuid) : JobRequest(JobPriority.P0);
 
 public sealed record FetchMatches(IReadOnlyList<string> MatchIds, bool WithTimeline, JobPriority Priority) : JobRequest(Priority);
 
-public sealed record LoadMoreMatches(string Puuid, int Start) : JobRequest(JobPriority.P1);
+// No cursor: the job reads Player.HistoryCoveredUntil, so the client can't skip over a gap.
+public sealed record LoadMoreMatches(string Puuid) : JobRequest(JobPriority.P1);

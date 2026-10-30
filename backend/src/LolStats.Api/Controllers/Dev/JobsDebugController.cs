@@ -22,4 +22,14 @@ public sealed class JobsDebugController(IJobQueue jobs) : ControllerBase
 
         return Accepted(new { jobId });
     }
+    
+    // POST dev/jobs/load-more/{puuid}
+    [HttpPost("load-more/{puuid}")]
+    public IActionResult LoadMore(string puuid)
+    {
+        var job = new LoadMoreMatches(puuid);
+        var jobId = jobs.Enqueue(job);
+
+        return Accepted(new {jobId});
+    }
 }

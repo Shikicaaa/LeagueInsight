@@ -3,6 +3,7 @@ using LolStats.Domain.Jobs;
 using LolStats.Infrastructure;
 using LolStats.Riot;
 using LolStats.Worker.Jobs;
+using LolStats.Worker.Ingestion;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddLolStatsData(
@@ -20,6 +21,11 @@ builder.Services.AddLolStatsValkey(
 
 // Job handlers: one per JobRequest type.
 builder.Services.AddScoped<IJobHandler<RefreshPlayer>, RefreshPlayerJob>();
+builder.Services.AddScoped<IJobHandler<FetchMatches>, FetchMatchesJob>();
+builder.Services.AddScoped<IJobHandler<LoadMoreMatches>, LoadMoreMatchesJob>();
+
+// Shared by every job that pulls matches; scoped so it shares the job's DbContext.
+builder.Services.AddScoped<MatchIngestor>();
 
 var host = builder.Build();
 host.Run();

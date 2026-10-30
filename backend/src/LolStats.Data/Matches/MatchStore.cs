@@ -5,13 +5,12 @@ namespace LolStats.Data.Matches;
 
 internal sealed class MatchStore(LolStatsDbContext db) : IMatchStore
 {
-    public async Task<IReadOnlySet<string>> GetExistingIdsAsync(IReadOnlySet<string> matchIds, CancellationToken ct = default)
+    public async Task<IReadOnlyDictionary<string, DateTimeOffset>> GetGameStartsAsync(IReadOnlySet<string> matchIds, CancellationToken ct = default)
     {
-        var existingIds = await db.Matches
+        return await db.Matches
             .Where(m => matchIds.Contains(m.MatchId))
-            .Select(m => m.MatchId).ToHashSetAsync(ct);
-
-        return existingIds;
+            .Select(m => new { m.MatchId, m.GameStart })   // project first, or EF loads and tracks whole matches
+            .ToDictionaryAsync(m => m.MatchId, m => m.GameStart, ct);
     }
 
     // Inserts the match row immediately, participants are only tracked.

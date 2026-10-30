@@ -34,10 +34,11 @@ public sealed class RiotDebugController(IRiotGateway riot) : ControllerBase
         string puuid,
         [FromQuery] QueueId queue = QueueId.RankedSolo,
         [FromQuery] DateTimeOffset? startTime = null,
+        [FromQuery] DateTimeOffset? endTime = null,
         [FromQuery] int start = 0,
         [FromQuery] int count = 10,
         CancellationToken ct = default) =>
-        Call(async () => Ok(await riot.GetMatchIdsAsync(puuid, new MatchIdsQuery(queue, startTime, start, count), ct)));
+        Call(async () => Ok(await riot.GetMatchIdsAsync(puuid, new MatchIdsQuery(queue, startTime, endTime, start, count), ct)));
 
     [HttpGet("matches/{matchId}")]
     public Task<IActionResult> GetMatch(string matchId, CancellationToken ct) =>

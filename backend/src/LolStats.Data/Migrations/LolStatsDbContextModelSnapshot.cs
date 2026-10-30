@@ -288,6 +288,14 @@ namespace LolStats.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("game_name");
 
+                    b.Property<bool>("HistoryComplete")
+                        .HasColumnType("boolean")
+                        .HasColumnName("history_complete");
+
+                    b.Property<DateTimeOffset?>("HistoryCoveredUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("history_covered_until");
+
                     b.Property<DateTimeOffset?>("LastMatchTs")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_match_ts");

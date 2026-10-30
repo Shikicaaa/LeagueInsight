@@ -2,9 +2,9 @@ using LolStats.Data;
 using LolStats.Domain.Abstractions;
 using LolStats.Domain.Events;
 using LolStats.Domain.Jobs;
-using LolStats.Domain.Matches;
 using LolStats.Domain.Players;
 using LolStats.Domain.Riot;
+using LolStats.Worker.Ingestion;
 using Microsoft.EntityFrameworkCore;
 
 namespace LolStats.Worker.Jobs;
@@ -12,12 +12,12 @@ namespace LolStats.Worker.Jobs;
 // Flow 2: refreshes one player's summoner, rank and new ranked matches.
 public sealed class RefreshPlayerJob(
     ILogger<RefreshPlayerJob> logger, IDistributedLock locks,
-    IRiotGateway riot, LolStatsDbContext db, IMatchStore matches,
-    IEventPublisher events, TimeProvider time) : IJobHandler<RefreshPlayer>
+    IRiotGateway riot, LolStatsDbContext db,
+    IEventPublisher events, TimeProvider time, MatchIngestor ingestor) : IJobHandler<RefreshPlayer>
 {
     public async Task HandleAsync(RefreshPlayer job, CancellationToken ct)
     {
-        await using var handle = await locks.TryAcquireAsync($"lock:job:{job.Puuid}", TimeSpan.FromMinutes(4), ct);
+        await using var handle = await locks.TryAcquireAsync(PlayerLock.Key(job.Puuid), PlayerLock.Ttl, ct);
         if (handle is null)
         {
             logger.LogInformation("{Puuid} is already being refreshed by another worker, skipping", job.Puuid);
@@ -66,61 +66,33 @@ public sealed class RefreshPlayerJob(
             }
         }
 
-        var ids = new HashSet<string>();
-        foreach (var queue in new[] { QueueId.RankedSolo, QueueId.RankedFlex })
+        // At most one page, even after a long break: older new matches come with load-more, not in this P0 job.
+        var previousLastMatchTs = player.LastMatchTs;
+        var page = await ingestor.GetRankedPageAsync(player.Puuid, startTime: previousLastMatchTs, endTime: null, ct);
+
+        logger.LogInformation("{Puuid}: {Total} match ids since {LastMatchTs}, more: {HasMore}",
+            job.Puuid, page.Ids.Count, previousLastMatchTs, page.HasMore);
+        var result = await ingestor.IngestAsync(page.Ids, ct);
+
+        // Existing matches count too: they may have been ingested through someone else's refresh.
+        if (result.Newest is { } newest)
+            player.RecordIngestedMatch(newest.MatchId, newest.GameStart);
+
+        if (result.Oldest is { } oldest)
         {
-            var queueIds = await riot.GetMatchIdsAsync(player.Puuid, new MatchIdsQuery(queue, StartTime: player.LastMatchTs), ct);
-            ids.UnionWith(queueIds);
+            // The page reaches what we already had, or Riot had nothing more since LastMatchTs.
+            var connected = !page.HasMore || oldest.GameStart <= previousLastMatchTs;
+            // Only a first refresh (no startTime) that got everything has seen the player's whole history.
+            var complete = previousLastMatchTs is null && !page.HasMore;
+            player.RecordNewestPage(oldest.GameStart, connected, complete);
         }
-
-        var existing = await matches.GetExistingIdsAsync(ids, ct);
-        if (existing.Count > 0)
+        else if (previousLastMatchTs is null)
         {
-            var latestExisting = await db.Matches
-                .Where(m => existing.Contains(m.MatchId))
-                .OrderByDescending(m => m.GameStart)
-                .Select(m => new { m.MatchId, m.GameStart })
-                .FirstOrDefaultAsync(ct);
-            if (latestExisting is not null)
-                player.RecordIngestedMatch(latestExisting.MatchId, latestExisting.GameStart);    
-        }
-        
-        var newIds = ids.Except(existing)
-            .OrderBy(id => long.Parse(id[(id.IndexOf('_') + 1)..]))   // EUN1_4021457560 -> 4021457560, oldest first
-            .ToList();
-
-        logger.LogInformation("{Puuid}: {Total} match ids since {LastMatchTs}", player.Puuid, ids.Count, player.LastMatchTs);
-
-        var savedIds = new List<string>();
-        foreach (var matchId in newIds)
-        {
-            var match = await riot.GetMatchAsync(matchId, ct);
-            if (match is null)
-            {
-                logger.LogWarning("No match found for {MatchId}, skipping", matchId);
-                continue;
-            }
-
-            await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            if (await matches.TryAddAsync(match, ct))
-            {
-                events.Publish(new MatchIngested(
-                    match.MatchId, 
-                    match.Participants.Select(p => p.Puuid).ToList(), 
-                    match.Patch, 
-                    match.QueueId, 
-                    match.HasTimeline
-                ));
-            }
-
-            player.RecordIngestedMatch(match.MatchId, match.GameStart);
-            await db.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
-            savedIds.Add(match.MatchId);
+            player.ExtendHistory(oldest: null, complete: true); // no ranked matches at all
         }
 
         player.MarkRefreshed(time.GetUtcNow());
-        events.Publish(new PlayerRefreshed(player.Puuid, savedIds));
+        events.Publish(new PlayerRefreshed(player.Puuid, result.Ingested.Select(m => m.MatchId).ToList()));
 
         await db.SaveChangesAsync(ct);
 

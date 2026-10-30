@@ -18,6 +18,7 @@ internal sealed class MatchClient(HttpClient http) : RiotClientBase(http)
         string puuid,
         int queue,
         long? startTimeSeconds,   // epoch SECONDS, not ms
+        long? endTimeSeconds,
         int start = 0,
         int count = 20,
         CancellationToken ct = default
@@ -28,7 +29,8 @@ internal sealed class MatchClient(HttpClient http) : RiotClientBase(http)
 
         if (startTimeSeconds is not null)
             path += $"&startTime={startTimeSeconds}";
-
+        if (endTimeSeconds is not null)
+            path += $"&endTime={endTimeSeconds}";
         return GetAsync<IReadOnlyList<string>>(path, "match-v5.by-puuid", ct);
     }
 }

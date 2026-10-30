@@ -10,6 +10,7 @@ public sealed record SummonerProfile(int ProfileIconId, int SummonerLevel);
 public sealed record MatchIdsQuery(
     QueueId Queue,
     DateTimeOffset? StartTime = null,
+    DateTimeOffset? EndTime = null,
     int Start = 0,
     int Count = 10
 );

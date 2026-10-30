@@ -55,6 +55,7 @@ internal sealed class RiotGateway(
             puuid,
             (int)query.Queue,
             query.StartTime?.ToUnixTimeSeconds(),
+            query.EndTime?.ToUnixTimeSeconds(),
             query.Start,
             query.Count,
             ct);
